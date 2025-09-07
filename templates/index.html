@@ -2,50 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Password Reset Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Heroicons for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/heroicons/2.0.16/solid.min.css" integrity="sha512-6I1vC0f8l5+4v2zL9O0m6+9K+9kXw7sZ4q6vX7oF5XJ8X9u0sI8k4F2o8q1p0uM9l4w1o7sF2Q+5k4s0J8q6w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 8px; }
-        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #45a049; }
-        #message { margin-top: 10px; color: green; }
-        #error { margin-top: 10px; color: red; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
+            color: #374151;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .portal-card {
+            max-width: 450px;
+            padding: 2rem;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .input-field:focus {
+            border-color: #4B9CD3;
+            box-shadow: 0 0 0 3px rgba(75, 156, 211, 0.2);
+            outline: none;
+        }
+        .btn-reset {
+            background: linear-gradient(90deg, #4B9CD3, #6BA4D4);
+            transition: all 0.3s ease;
+        }
+        .btn-reset:hover {
+            background: linear-gradient(90deg, #3A8AC2, #5A93C3);
+            transform: translateY(-2px);
+        }
+        .message-success {
+            animation: slideIn 0.5s ease-out;
+        }
+        .message-error {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
-    <h2>Reset Your VM Password</h2>
-    <form id="resetForm">
-        <div class="form-group">
-            <label for="vm_ip">VM IP Address:</label>
-            <input type="text" id="vm_ip" name="vm_ip" required pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}" title="Enter a valid IP address (e.g., 192.168.1.1)">
+    <div class="portal-card">
+        <div class="text-center mb-6">
+            <i class="h-12 w-12 text-blue-500 mx-auto mb-2" data-icon="lock-closed"></i>
+            <h1 class="text-2xl font-bold text-gray-800">Password Reset Portal</h1>
+            <p class="text-sm text-gray-500">Reset your VM password securely and easily</p>
         </div>
-        <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        <div class="form-group">
-            <label for="old_password">Old Password:</label>
-            <input type="password" id="old_password" name="old_password" required>
-        </div>
-        <div class="form-group">
-            <label for="new_password">New Password (min 8 characters):</label>
-            <input type="password" id="new_password" name="new_password" required>
-        </div>
-        <button type="button" onclick="resetPassword()">Reset Password</button>
-    </form>
-    <div id="message"></div>
-    <div id="error"></div>
-
+        <form id="resetForm" class="space-y-4">
+            <div>
+                <label for="vm_ip" class="block text-sm font-medium text-gray-700">VM IP Address</label>
+                <input type="text" id="vm_ip" name="vm_ip" class="input-field mt-1 p-2 w-full border border-gray-300 rounded-md focus:input-field" placeholder="e.g., 192.168.91.129" required pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}" title="Enter a valid IP (e.g., 192.168.1.1)">
+            </div>
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="username" name="username" class="input-field mt-1 p-2 w-full border border-gray-300 rounded-md focus:input-field" placeholder="e.g., user1" required>
+            </div>
+            <div>
+                <label for="old_password" class="block text-sm font-medium text-gray-700">Old Password</label>
+                <input type="password" id="old_password" name="old_password" class="input-field mt-1 p-2 w-full border border-gray-300 rounded-md focus:input-field" placeholder="Enter old password" required>
+            </div>
+            <div>
+                <label for="new_password" class="block text-sm font-medium text-gray-700">New Password (min 8 chars)</label>
+                <input type="password" id="new_password" name="new_password" class="input-field mt-1 p-2 w-full border border-gray-300 rounded-md focus:input-field" placeholder="Enter new password" required oninput="checkPasswordStrength()">
+                <div id="strength-meter" class="strength-meter mt-1"></div>
+            </div>
+            <button type="button" onclick="resetPassword()" class="btn-reset w-full text-white p-2 rounded-md font-semibold">Reset My Password</button>
+            <div id="message" class="message-success text-green-700 text-center mt-4 hidden"></div>
+            <div id="error" class="message-error text-red-700 text-center mt-4 hidden"></div>
+        </form>
+    </div>
     <script>
+        function checkPasswordStrength() {
+            const password = document.getElementById('new_password').value;
+            const meter = document.getElementById('strength-meter');
+            let strength = 0;
+            if (password.length > 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[!@#$%^&*]/.test(password)) strength++;
+
+            if (strength <= 1) {
+                meter.style.width = '33%';
+                meter.className = 'strength-meter mt-1 bg-red-500';
+            } else if (strength <= 2) {
+                meter.style.width = '66%';
+                meter.className = 'strength-meter mt-1 bg-yellow-500';
+            } else {
+                meter.style.width = '100%';
+                meter.className = 'strength-meter mt-1 bg-green-500';
+            }
+        }
+
         function resetPassword() {
             const newPassword = document.getElementById('new_password').value;
             if (newPassword.length < 8) {
-                document.getElementById('error').innerText = 'New password must be at least 8 characters long!';
+                document.getElementById('error').innerText = 'New password must be at least 8 characters!';
+                document.getElementById('error').classList.remove('hidden');
+                document.getElementById('message').classList.add('hidden');
                 return;
             }
-            
+
             const form = document.getElementById('resetForm');
             const formData = new FormData(form);
             fetch('/reset_password', {
@@ -54,12 +126,22 @@
             })
             .then(response => response.json())
             .then(data => {
+                const messageDiv = document.getElementById('message');
+                const errorDiv = document.getElementById('error');
                 if (data.message) {
-                    document.getElementById('message').innerText = data.message;
-                    document.getElementById('error').innerText = '';
+                    messageDiv.innerText = data.message;
+                    messageDiv.classList.remove('hidden');
+                    errorDiv.classList.add('hidden');
                 } else {
-                    document.getElementById('error').innerText = data.error || 'Old password incorrect or connection failed!';
+                    errorDiv.innerText = data.error || 'Old password incorrect or connection failed!';
+                    errorDiv.classList.remove('hidden');
+                    messageDiv.classList.add('hidden');
                 }
+            })
+            .catch(error => {
+                document.getElementById('error').innerText = 'An error occurred. Please try again.';
+                document.getElementById('error').classList.remove('hidden');
+                document.getElementById('message').classList.add('hidden');
             });
         }
     </script>

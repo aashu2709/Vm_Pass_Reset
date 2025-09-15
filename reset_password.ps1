@@ -1,9 +1,9 @@
 param (
-    [string]$vm_ip,
-    [string]$username,
-    [string]$old_password,
-    [string]$new_password,
-    [string]$admin_user
+    [Parameter(Mandatory=$true)][ValidatePattern('^(\d{1,3}\.){3}\d{1,3}$')][string]$vm_ip,
+    [Parameter(Mandatory=$true)][ValidatePattern('^[A-Za-z0-9._@\\-]{1,64}$')][string]$username,
+    [Parameter(Mandatory=$true)][string]$old_password,
+    [Parameter(Mandatory=$true)][string]$new_password,
+    [Parameter(Mandatory=$true)][string]$admin_user
 )
 
 try {
@@ -21,6 +21,19 @@ try {
     # 3️⃣ Optional: Verify connectivity to remote VM
     if (-not (Test-Connection -ComputerName $vm_ip -Count 1 -Quiet)) {
         throw "Cannot reach VM at $vm_ip. Check network or firewall."
+    }
+
+     $secure_old_pass = ConvertTo-SecureString $old_password -AsPlainText -Force
+    $oldCred = New-Object System.Management.Automation.PSCredential($username, $secure_old_pass)
+
+    try {
+        # Harmless command to test login with old password
+        Invoke-Command -ComputerName $vm_ip -Credential $oldCred -ScriptBlock { whoami } -ErrorAction Stop | Out-Null
+        Write-Output "Old password verified successfully."
+    }
+    catch {
+        Write-Error "Error: Old password is incorrect."
+        exit 1
     }
 
     # 4️⃣ Run password reset remotely

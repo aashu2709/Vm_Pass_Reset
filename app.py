@@ -5,15 +5,32 @@ import re
 import ipaddress
 import shutil
 import logging
+from logging.handlers import RotatingFileHandler  # For file logging with rotation
 
 # ----------------------------------------------------
 # Logging configuration
 # ----------------------------------------------------
-# Logs activity and errors into console (and optionally file if you extend it).
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+# Logs to BOTH console (terminal) and file in 'logs/' folder.
+# Terminal: Limited (INFO+), File: Detailed (DEBUG+).
+log_dir = 'logs'  # Folder inside PasswordResetApp
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'app.log')  # Exact name from screenshot
+
+# Console handler (limited: INFO and above only)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)  # Changed to INFO for limited terminal output
+
+# File handler (detailed: DEBUG and above)
+file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)  # 10MB per file, 5 backups
+file_handler.setLevel(logging.DEBUG)  # DEBUG for full details in file
+
+# Formatter for both (same as before: timestamp - level - message)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# Root logger setup
+logging.basicConfig(level=logging.DEBUG, handlers=[console_handler, file_handler])
 
 # ----------------------------------------------------
 # Load admin credentials from environment variables
@@ -84,7 +101,7 @@ def run_reset_script(vm_ip, username, old_password, new_password, admin_user, ad
     """
     Securely run the PowerShell password reset script.
     - Arguments are passed as a list (avoids shell injection).
-    - Admin password is sent via stdin (avoids exposure in process list).
+    - Admin password is sent via stdin (avoids exposure in process list). DO NOT add admin_pass to cmd list!
     - Timeout ensures the call doesn't hang indefinitely.
     """
     pwsh = find_powershell_executable()
@@ -95,15 +112,19 @@ def run_reset_script(vm_ip, username, old_password, new_password, admin_user, ad
         pwsh, '-File', 'reset_password.ps1',
         vm_ip, username, old_password, new_password, admin_user
     ]
+    # IMPORTANT: admin_pass goes ONLY to input=stdin, NOT to cmd list (that causes positional param error)
 
     try:
+        logging.debug(f"DEBUG: Running cmd: {' '.join(cmd)}")  # DEBUG: Only to file
         result = subprocess.run(
             cmd,
-            input=admin_pass,        # admin password passed via stdin
+            input=admin_pass + '\n',  # Add \n for ReadLine() to properly read the line
             capture_output=True,     # capture stdout and stderr
             text=True,               # treat as text instead of bytes
             timeout=timeout          # fail after X seconds
         )
+        logging.debug(f"DEBUG: Script stdout: {result.stdout.strip()[:200]}...")  # DEBUG: Only to file
+        logging.debug(f"DEBUG: Script stderr: {result.stderr.strip()[:200]}...")  # DEBUG: Only to file
         return result
     except subprocess.TimeoutExpired:
         raise RuntimeError("Password reset operation timed out.")

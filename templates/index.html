@@ -95,6 +95,13 @@
         </form>
     </div>
     <script>
+        // ✅ IP Validation Function
+        function isValidIP(ip) {
+            const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!ipRegex.test(ip)) return false;
+            return ip.split('.').every(octet => parseInt(octet, 10) <= 255);
+        }
+
         // ✅ Enhanced password strength checker (matches backend rules)
         function checkPasswordStrength() {
             const password = document.getElementById('new_password').value;
@@ -102,13 +109,13 @@
             const errorDiv = document.getElementById('error');
 
             let errors = [];
-        // Password policy checks    
+            // Password policy checks    
             if (password.length < 8) errors.push("At least 8 characters");
             if (!/[A-Z]/.test(password)) errors.push("One uppercase letter");
             if (!/[a-z]/.test(password)) errors.push("One lowercase letter");
             if (!/[0-9]/.test(password)) errors.push("One number");
             if (!/[!@#$%^&*(),.?\":{}|<>]/.test(password)) errors.push("One special character");
-        // Calculate progress for strength bar    
+            // Calculate progress for strength bar    
             const satisfied = 5 - errors.length;
             const percent = (satisfied / 5) * 100;
 
@@ -130,91 +137,84 @@
             }
         }
 
-        // function isValidIP(ip) {
-        //     return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
-        // }
+        // 🔹 Call backend API to reset password (Updated with form clear on success + IP check)
+        function resetPassword() {
+            const vmIP = document.getElementById('vm_ip').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const oldPassword = document.getElementById('old_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const errorDiv = document.getElementById('error');
+            const messageDiv = document.getElementById('message');
+            const form = document.getElementById('resetForm');
 
-        // function resetPassword() {
-        //     const vmIP = document.getElementById('vm_ip').value;
-        //     const newPassword = document.getElementById('new_password').value;
-        //     const errorDiv = document.getElementById('error');
-        //     const messageDiv = document.getElementById('message');
+            // Client-side validations
+            if (!vmIP || !isValidIP(vmIP)) {
+                errorDiv.innerText = "Please enter a valid IPv4 address (e.g., 192.168.1.10).";
+                errorDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+                return;
+            }
+            if (!username) {
+                errorDiv.innerText = "Please enter username.";
+                errorDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+                return;
+            }
+            if (!oldPassword) {
+                errorDiv.innerText = "Please enter old password.";
+                errorDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+                return;
+            }
+            if (newPassword.length < 8) {
+                errorDiv.innerText = 'New password must be at least 8 characters!';
+                errorDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+                return;
+            }
 
-        //     if (!isValidIP(vmIP)) {
-        //         errorDiv.innerText = "Please enter a valid IPv4 address (e.g., 192.168.1.10).";
-        //         errorDiv.classList.remove('hidden');
-        //         messageDiv.classList.add('hidden');
-        //         return;
-        //     }
+            const formData = new FormData(form);
 
-        //     if (newPassword.length < 8) {
-        //         errorDiv.innerText = 'New password must be at least 8 characters!';
-        //         errorDiv.classList.remove('hidden');
-        //         messageDiv.classList.add('hidden');
-        //         return;
-        //     }
-
-        //     const form = document.getElementById('resetForm');
-        //     const formData = new FormData(form);
-        //     fetch('/reset_password', {
-        //         method: 'POST',
-        //         body: formData
-        //     })
-        //     .then(response => response.json())
-        //     .then(data => {
-        //         if (data.message) {
-        //             messageDiv.innerText = data.message;
-        //             messageDiv.classList.remove('hidden');
-        //             errorDiv.classList.add('hidden');
-        //         } else {
-        //             errorDiv.innerText = data.error || 'Old password incorrect or connection failed!';
-        //             errorDiv.classList.remove('hidden');
-        //             messageDiv.classList.add('hidden');
-        //         }
-        //     })
-        //     .catch(error => {
-        //         errorDiv.innerText = 'An error occurred. Please try again.';
-        //         errorDiv.classList.remove('hidden');
-        //         messageDiv.classList.add('hidden');
-        //     });
-        // }
-           // 🔹 Call backend API to reset password
-    function resetPassword() {
-      const form = document.getElementById('resetForm');
-      const formData = new FormData(form);
-      const errorDiv = document.getElementById('error');
-      const messageDiv = document.getElementById('message');
-
-      fetch('/reset_password', {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.message) {
-          // Success response
-          messageDiv.innerText = data.message;
-          messageDiv.classList.remove('hidden');
-          errorDiv.classList.add('hidden');
-           // ✅ Auto-hide after 5 seconds
-            setTimeout(() => messageDiv.classList.add('hidden'), 7000);
-        } else {
-          // Error response
-          errorDiv.innerText = data.error || 'Password reset failed.';
-          errorDiv.classList.remove('hidden');
-          messageDiv.classList.add('hidden');
-            // ✅ Auto-hide after 5 seconds
-              setTimeout(() => errorDiv.classList.add('hidden'), 7000);
-
+            fetch('/reset_password', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    // Success response
+                    messageDiv.innerText = data.message;
+                    messageDiv.classList.remove('hidden');
+                    errorDiv.classList.add('hidden');
+                    
+                    // ✅ KEY FIX: Clear all form fields on success
+                    form.reset();  // Resets all inputs to default (empty)
+                    // Extra: Explicit clear for password fields (browser-safe)
+                    document.getElementById('old_password').value = '';
+                    document.getElementById('new_password').value = '';
+                    // Reset strength meter
+                    document.getElementById('strength-meter').style.width = '0%';
+                    document.getElementById('strength-meter').className = 'strength-meter mt-1 bg-gray-200';
+                    
+                    // Auto-hide after 7 seconds
+                    setTimeout(() => messageDiv.classList.add('hidden'), 7000);
+                } else {
+                    // Error response
+                    errorDiv.innerText = data.error || 'Password reset failed.';
+                    errorDiv.classList.remove('hidden');
+                    messageDiv.classList.add('hidden');
+                    // Auto-hide after 7 seconds
+                    setTimeout(() => errorDiv.classList.add('hidden'), 7000);
+                }
+            })
+            .catch(() => {
+                // Network/backend error
+                errorDiv.innerText = 'An error occurred. Please try again.';
+                errorDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+                setTimeout(() => errorDiv.classList.add('hidden'), 7000);
+            });
         }
-      })
-      .catch(() => {
-        // Network/backend error
-        errorDiv.innerText = 'An error occurred. Please try again.';
-        errorDiv.classList.remove('hidden');
-        messageDiv.classList.add('hidden');
-      });
-    }
     </script>
 </body>
 </html>

@@ -144,6 +144,8 @@ def reset_password():
     Handle password reset form submission.
     Validates inputs, runs the PowerShell script,
     and returns JSON response.
+    - On success: Returns {'message': '...'} – frontend clears form based on this.
+    - On error: Returns {'error': '...'} – frontend retains form for retry.
     """
     # --- Step 1: Get required fields ---
     try:
@@ -184,6 +186,7 @@ def reset_password():
     # --- Step 6: Handle result ---
     if result.returncode == 0:
         logging.info(f"Password reset successful for user='{username}' on vm='{vm_ip}'")
+        # ✅ Response for success: Frontend will clear form on receiving 'message'
         return jsonify({'message': 'Password reset successfully!'})
     else:
         # Extract first "Error:" line if present for user-friendly message
@@ -197,10 +200,12 @@ def reset_password():
             f"Reset failed for user='{username}' on vm='{vm_ip}'. "
             f"stderr: {result.stderr.strip()[:500]}"
         )
+        # ✅ Response for error: Frontend retains form for retry
         return jsonify({'error': user_error}), 400
 
 # ----------------------------------------------------
 # Run development server
 # ----------------------------------------------------
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    from waitress import serve  # Waitress import
+    serve(app, host='127.0.0.1', port=5000, threads=8)  # Localhost pe port 5000, 8 threads
